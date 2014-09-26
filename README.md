@@ -5,12 +5,8 @@ Download-Imooc
 
 您可以这样使用：
 
-```powershell
-.\Download-Imooc.ps1 http://www.imooc.com/learn/197
-```
+    .\Download-Imooc.ps1 http://www.imooc.com/learn/197
 
 也可以这样使用：
 
-```powershell
-.\Download-Imooc.ps1 75,197
-```
+    .\Download-Imooc.ps1 75,197
