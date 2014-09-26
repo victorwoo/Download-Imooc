@@ -11,7 +11,7 @@ Param
 )
 
 $DebugPreference = 'Continue' # Continue, SilentlyContinue
-$WhatIfPreference = $false # $true, $false
+#$WhatIfPreference = $false # $true, $false
 
 # 修正文件名，将文件系统不支持的字符替换成“.”
 function Fix-FileName {
