@@ -135,6 +135,11 @@ function Download-Course {
     }
 }
 
+if (($PSVersionTable.PSCompatibleVersions | Where-Object Major -ge 5).Count -eq 0) {
+    Write-Error '请安装 PowerShell 3.0 以上的版本。'
+    exit
+}
+
 $chosen= $PSCmdlet.ParameterSetName
 if ($chosen -eq 'URI') {
     Download-Course $Uri
