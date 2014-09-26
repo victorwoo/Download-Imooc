@@ -1,7 +1,7 @@
 ﻿[CmdletBinding(DefaultParameterSetName='URI', SupportsShouldProcess=$true, ConfirmImpact='Medium')]
 Param
 (
-    [Parameter(ParameterSetName='ID',Position = 0)]
+    [Parameter(ParameterSetName='URI',Position = 0)]
     [string]
     $Uri = 'http://www.imooc.com/learn/197',
 
@@ -10,7 +10,7 @@ Param
     $ID = @(75, 197)
 )
 
-$DebugPreference = 'Continue' # Continue, SilentlyContinue
+$DebugPreference = 'SilentlyContinue' # Continue, SilentlyContinue
 #$WhatIfPreference = $false # $true, $false
 
 # 修正文件名，将文件系统不支持的字符替换成“.”
@@ -90,7 +90,9 @@ function New-ShortCut {
     )
 
     $shell = New-Object -com 'wscript.shell'
-    $lnk = $shell.CreateShortcut("$Title\$Title.url")
+    $dir = pwd
+    $path = Join-Path $dir "$Title\$Title.url"
+    $lnk = $shell.CreateShortcut($path)
     $lnk.TargetPath = $Uri
     $lnk.Save()
 }
