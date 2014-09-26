@@ -1,9 +1,17 @@
-﻿Param (
+﻿[CmdletBinding(DefaultParameterSetName='URI', SupportsShouldProcess=$true, ConfirmImpact='Medium')]
+Param
+(
+    [Parameter(ParameterSetName='ID',Position = 0)]
     [string]
-    $Uri = 'http://www.imooc.com/learn/197'
+    $Uri = 'http://www.imooc.com/learn/197',
+
+    [Parameter(ParameterSetName='ID', Position = 0, Mandatory=$true)]
+    [int[]]
+    $ID = @(75, 197)
 )
 
-$DebugPreference = 'Continue'
+$DebugPreference = 'Continue' # Continue, SilentlyContinue
+$WhatIfPreference = $false # $true, $false
 
 # 修正文件名，将文件系统不支持的字符替换成“.”
 function Fix-FileName {
@@ -31,6 +39,7 @@ function Fix-FolderName {
     return $FolderName
 }
 
+# 从专辑页面中分析标题和视频页面的 ID。
 function Get-ID {
     Param (
         $Uri
@@ -51,6 +60,7 @@ function Get-ID {
     }
 }
 
+# 获取视频下载地址。
 function Get-VideoUri {
     Param (
         [Parameter(ValueFromPipeline=$true)]
@@ -72,6 +82,7 @@ function Get-VideoUri {
     return $uri
 }
 
+# 创建“.url”快捷方式。
 function New-ShortCut {
     Param (
         $Title,
@@ -84,30 +95,52 @@ function New-ShortCut {
     $lnk.Save()
 }
 
-Write-Progress -Activity '下载视频' -Status '分析视频 ID'
-$title, $ids = Get-ID -Uri $Uri
-Write-Output "课程名称：$title"
-Write-Debug $title
-$folderName = Fix-FolderName $title
-Write-Debug $folderName
-if (-not (Test-Path $folderName)) { $null = mkdir $folderName }
-New-ShortCut -Title $title -Uri $Uri
+# 下载课程。
+function Download-Course {
+    Param (
+        [string]$Uri
+    )
 
-$ids | ForEach-Object {
-    if ($_.Title -cnotmatch '(?m)^\d') {
-        return
-    }
+    Write-Progress -Activity '下载视频' -Status '分析视频 ID'
+    $title, $ids = Get-ID -Uri $Uri
+    Write-Output "课程名称：$title"
+    Write-Debug $title
+    $folderName = Fix-FolderName $title
+    Write-Debug $folderName
+    if (-not (Test-Path $folderName)) { $null = mkdir $folderName }
+    New-ShortCut -Title $title -Uri $Uri
+
+    $ids | ForEach-Object {
+        if ($_.Title -cnotmatch '(?m)^\d') {
+            return
+        }
     
-    $title = $_.Title
-    Write-Progress -Activity '下载视频' -Status '获取视频地址'
-    $videoUrl = Get-VideoUri $_.ID
-    $extension = ($videoUrl -split '\.')[-1]
+        $title = $_.Title
+        Write-Progress -Activity '下载视频' -Status '获取视频地址'
+        $videoUrl = Get-VideoUri $_.ID
+        $extension = ($videoUrl -split '\.')[-1]
 
-    Write-Progress -Activity '下载视频' -Status "下载《$title》视频文件"
-    $title = Fix-FileName $title
-    $outputPath = "$folderName\$title.$extension"
-    Write-Output $title
-    Write-Debug $videoUrl
-    Write-Debug $outputPath
-    Invoke-WebRequest -Uri $videoUrl -OutFile "$folderName\$title.$extension"
+        Write-Progress -Activity '下载视频' -Status "下载《$title》视频文件"
+        $title = Fix-FileName $title
+        $outputPath = "$folderName\$title.$extension"
+        Write-Output $title
+        Write-Debug $videoUrl
+        Write-Debug $outputPath
+
+        if ($PSCmdlet.ShouldProcess("$videoUrl", 'Invoke-WebRequest')) {
+            Invoke-WebRequest -Uri $videoUrl -OutFile $outputPath
+        }
+    }
+}
+
+$chosen= $PSCmdlet.ParameterSetName
+if ($chosen -eq 'URI') {
+    Download-Course $Uri
+}
+if ($chosen -eq 'ID') {
+    $template = 'http://www.imooc.com/learn/{0}'
+    $ID | ForEach-Object {
+        $Uri = $template -f $_
+        Download-Course $Uri
+    }
 }
