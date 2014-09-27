@@ -1,4 +1,6 @@
-﻿[CmdletBinding(DefaultParameterSetName='URI', SupportsShouldProcess=$true, ConfirmImpact='Medium')]
+﻿# Require PowerShell 3.0 or higher.
+
+[CmdletBinding(DefaultParameterSetName='URI', SupportsShouldProcess=$true, ConfirmImpact='Medium')]
 Param
 (
     [Parameter(ParameterSetName='URI',Position = 0)]
@@ -135,10 +137,14 @@ function Download-Course {
     }
 }
 
-if (($PSVersionTable.PSCompatibleVersions | Where-Object Major -ge 5).Count -eq 0) {
-    Write-Error '请安装 PowerShell 3.0 以上的版本。'
-    exit
+function Check-PSVersion {
+    if (($PSVersionTable.PSCompatibleVersions | Where-Object Major -ge 3).Count -eq 0) {
+        Write-Error '请安装 PowerShell 3.0 以上的版本。'
+        exit
+    }
 }
+
+Check-PSVersion
 
 $chosen= $PSCmdlet.ParameterSetName
 if ($chosen -eq 'URI') {
