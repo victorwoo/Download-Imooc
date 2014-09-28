@@ -5,15 +5,15 @@ Param
 (
     [Parameter(ParameterSetName='URI',Position = 0)]
     [string]
-    $Uri = 'http://www.imooc.com/learn/197',
+    $Uri, # 'http://www.imooc.com/learn/197'
 
-    [Parameter(ParameterSetName='ID', Position = 0, Mandatory=$true)]
+    [Parameter(ParameterSetName='ID', Position = 0)]
     [int[]]
-    $ID = @(75, 197)
+    $ID # @(75, 197)
 )
 
-$DebugPreference = 'SilentlyContinue' # Continue, SilentlyContinue
-#$WhatIfPreference = $false # $true, $false
+$DebugPreference = 'Continue' # Continue, SilentlyContinue
+$WhatIfPreference = $true # $true, $false
 
 # 修正文件名，将文件系统不支持的字符替换成“.”
 function Fix-FileName {
@@ -91,7 +91,7 @@ function New-ShortCut {
         $Uri
     )
 
-    $shell = New-Object -com 'wscript.shell'
+    $shell = New-Object -ComObject 'wscript.shell'
     $dir = pwd
     $path = Join-Path $dir "$Title\$Title.url"
     $lnk = $shell.CreateShortcut($path)
@@ -124,15 +124,19 @@ function Download-Course {
         $videoUrl = Get-VideoUri $_.ID
         $extension = ($videoUrl -split '\.')[-1]
 
-        Write-Progress -Activity '下载视频' -Status "下载《$title》视频文件"
         $title = Fix-FileName $title
         $outputPath = "$folderName\$title.$extension"
         Write-Output $title
         Write-Debug $videoUrl
         Write-Debug $outputPath
 
-        if ($PSCmdlet.ShouldProcess("$videoUrl", 'Invoke-WebRequest')) {
-            Invoke-WebRequest -Uri $videoUrl -OutFile $outputPath
+        if (Test-Path $outputPath) {
+            Write-Warning "目标文件 $outputPath 已存在，自动跳过"
+        } else {
+            Write-Progress -Activity '下载视频' -Status "下载《$title》视频文件"
+            if ($PSCmdlet.ShouldProcess("$videoUrl", 'Invoke-WebRequest')) {
+                Invoke-WebRequest -Uri $videoUrl -OutFile $outputPath
+            }
         }
     }
 }
@@ -144,11 +148,33 @@ function Check-PSVersion {
     }
 }
 
+function Get-ExistingCourses {
+    Get-ChildItem -Directory | ForEach-Object {
+        $folder = $_
+        $expectedFilePath = (Join-Path $folder $folder.Name) + '.url'
+        if (Test-Path -PathType Leaf $expectedFilePath) {
+            $shell = New-Object -ComObject 'wscript.shell'
+            $lnk = $shell.CreateShortcut($expectedFilePath)
+            $targetPath = $lnk.TargetPath
+            if ($targetPath -cmatch '(?m)\A^http://www\.imooc\.com/\w+/\d+$\z') {
+                echo $targetPath
+            }
+        }
+    }
+}
+
 Check-PSVersion
 
+# 判断参数集
 $chosen= $PSCmdlet.ParameterSetName
 if ($chosen -eq 'URI') {
-    Download-Course $Uri
+    if ($Uri) {
+        Download-Course $Uri
+    } else {
+        Get-ExistingCourses | ForEach-Object {
+            Download-Course $_
+        }
+    }
 }
 if ($chosen -eq 'ID') {
     $template = 'http://www.imooc.com/learn/{0}'
