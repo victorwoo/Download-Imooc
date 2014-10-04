@@ -3,11 +3,11 @@
 [CmdletBinding(DefaultParameterSetName='URI', SupportsShouldProcess=$true, ConfirmImpact='Medium')]
 Param
 (
-    [Parameter(ParameterSetName='URI',Position = 0)]
+    [Parameter(ParameterSetName='URI', Position = 0, Mandatory = $true, HelpMessage = '请输入专辑 URL')]
     [string]
     $Uri, # 'http://www.imooc.com/learn/197'
 
-    [Parameter(ParameterSetName='ID', Position = 0)]
+    [Parameter(ParameterSetName='ID', Position = 0, Mandatory = $true, HelpMessage = '请输入专辑 ID，多个 ID 请用逗号隔开')]
     [int[]]
     $ID, # @(75, 197)
 
@@ -167,7 +167,7 @@ function Download-Course {
         Write-Debug $outputPath
 
         if (Test-Path $outputPath) {
-            Write-Warning "目标文件 $outputPath 已存在，自动跳过"
+            Write-Debug "目标文件 $outputPath 已存在，自动跳过"
         } else {
             Write-Progress -Activity '下载视频' -Status "下载《$title》视频文件"
             if ($PSCmdlet.ShouldProcess("$videoUrl", 'Invoke-WebRequest')) {
@@ -211,6 +211,7 @@ function Download-Course {
                     $outputPathes | ForEach-Object {
                         Remove-Item $_
                     }
+                    Write-Output '原始视频删除完毕'
                 }
             } else {
                 Write-Warning '视频合并失败'
