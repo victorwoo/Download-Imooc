@@ -12,7 +12,10 @@ Param
     $ID, # @(75, 197)
 
     [Switch]
-    $Combine # = $true
+    $Combine, # = $true
+
+    [Switch]
+    $RemoveOriginal
 )
 
 # $DebugPreference = 'Continue' # Continue, SilentlyContinue
@@ -145,6 +148,7 @@ function Download-Course {
 
     $outputPathes = New-Object System.Collections.ArrayList
     $actualDownloadAny = $false
+    #$ids = $ids | Select-Object -First 3
     $ids | ForEach-Object {
         if ($_.Title -cnotmatch '(?m)^\d') {
             return
@@ -177,16 +181,17 @@ function Download-Course {
     #if ($Combine -and ($actualDownloadAny -or -not (Test-Path $targetFile))) {
     if ($Combine) {
         # -and ($actualDownloadAny -or -not (Test-Path $targetFile))) {
-        if ($actualDownloadAny -or -not (Test-Path $targetFile) -or (Test-Path $targetFile) -and $PSCmdlet.ShouldProcess("合并视频")) {
+        if ($actualDownloadAny -or -not (Test-Path $targetFile) -or (Test-Path $targetFile) -and $PSCmdlet.ShouldProcess('分段视频', '合并')) {
             Write-Progress -Activity '下载视频' -Status '合并视频'    
             Write-Output ("合并视频（共 {0:N0} 个）" -f $outputPathes.Count)
             $outputPathes.Insert(0, $targetFile)
         
-            #$eap = $ErrorActionPreference
-            #$ErrorActionPreference = "SilentlyContinue"
-            #.\FlvBind.exe $outputPathes.ToArray()
-            #$ErrorActionPreference = $eap
+            $eap = $ErrorActionPreference
+            $ErrorActionPreference = "SilentlyContinue"
+            .\FlvBind.exe $outputPathes.ToArray()
+            $ErrorActionPreference = $eap
 
+            <#
             $outputPathes = $outputPathes | ForEach-Object {
                 "`"$_`""
             }
@@ -198,9 +203,15 @@ function Download-Course {
                 -Wait `
                 -ErrorAction SilentlyContinue `
                 -WindowStyle Hidden
-
+            #>
             if ($?) {
                 Write-Output '视频合并成功'
+                if ($RemoveOriginal -and $PSCmdlet.ShouldProcess('分段视频', '删除')) {
+                    $outputPathes.RemoveAt(0)
+                    $outputPathes | ForEach-Object {
+                        Remove-Item $_
+                    }
+                }
             } else {
                 Write-Warning '视频合并失败'
             }
