@@ -50,6 +50,10 @@ function Get-ID {
         $Uri
     )
     
+    $Uri = $Uri.Replace('/view/', '/learn/')
+    $Uri = $Uri.Replace('/qa/', '/learn/')
+    $Uri = $Uri.Replace('/note/', '/learn/')
+    $Uri = $Uri.Replace('/wiki/', '/learn/')
     $response = Invoke-WebRequest $Uri
     $title = $response.ParsedHtml.title
 
@@ -170,19 +174,36 @@ function Download-Course {
     }
 
     $targetFile = "$folderName\$folderName.flv"
-    if ($Combine -and ($actualDownloadAny -or -not (Test-Path $targetFile))) {
-        Write-Progress -Activity '下载视频' -Status '合并视频'    
-        Write-Output ("合并视频（共 {0:N0} 个）" -f $outputPathes.Count)
-        $outputPathes.Insert(0, $targetFile)
+    #if ($Combine -and ($actualDownloadAny -or -not (Test-Path $targetFile))) {
+    if ($Combine) {
+        # -and ($actualDownloadAny -or -not (Test-Path $targetFile))) {
+        if ($actualDownloadAny -or -not (Test-Path $targetFile) -or (Test-Path $targetFile) -and $PSCmdlet.ShouldProcess("合并视频")) {
+            Write-Progress -Activity '下载视频' -Status '合并视频'    
+            Write-Output ("合并视频（共 {0:N0} 个）" -f $outputPathes.Count)
+            $outputPathes.Insert(0, $targetFile)
         
-        $eap = $ErrorActionPreference
-        $ErrorActionPreference = "SilentlyContinue"
-        .\FlvBind.exe $outputPathes.ToArray()
-        $ErrorActionPreference = $eap
-        if ($?) {
-            Write-Output '视频合并成功'
-        } else {
-            Write-Warning '视频合并失败'
+            #$eap = $ErrorActionPreference
+            #$ErrorActionPreference = "SilentlyContinue"
+            #.\FlvBind.exe $outputPathes.ToArray()
+            #$ErrorActionPreference = $eap
+
+            $outputPathes = $outputPathes | ForEach-Object {
+                "`"$_`""
+            }
+            Start-Process `
+                -WorkingDirectory (pwd) `
+                -FilePath .\FlvBind.exe `
+                -ArgumentList $outputPathes `
+                -NoNewWindow `
+                -Wait `
+                -ErrorAction SilentlyContinue `
+                -WindowStyle Hidden
+
+            if ($?) {
+                Write-Output '视频合并成功'
+            } else {
+                Write-Warning '视频合并失败'
+            }
         }
     }
 }
