@@ -9,7 +9,10 @@ Param
 
     [Parameter(ParameterSetName='ID', Position = 0)]
     [int[]]
-    $ID # @(75, 197)
+    $ID, # @(75, 197)
+
+    [Switch]
+    $Combine # = $true
 )
 
 # $DebugPreference = 'Continue' # Continue, SilentlyContinue
@@ -99,49 +102,7 @@ function New-ShortCut {
     $lnk.Save()
 }
 
-# 下载课程。
-function Download-Course {
-    Param (
-        [string]$Uri
-    )
-
-    Write-Progress -Activity '下载视频' -Status '分析视频 ID'
-    $title, $ids = Get-ID -Uri $Uri
-    Write-Output "课程名称：$title"
-    Write-Debug $title
-    $folderName = Fix-FolderName $title
-    Write-Debug $folderName
-    if (-not (Test-Path $folderName)) { $null = mkdir $folderName }
-    New-ShortCut -Title $title -Uri $Uri
-
-    $ids | ForEach-Object {
-        if ($_.Title -cnotmatch '(?m)^\d') {
-            return
-        }
-    
-        $title = $_.Title
-        Write-Progress -Activity '下载视频' -Status '获取视频地址'
-        $videoUrl = Get-VideoUri $_.ID
-        $extension = ($videoUrl -split '\.')[-1]
-
-        $title = Fix-FileName $title
-        $outputPath = "$folderName\$title.$extension"
-        Write-Output $title
-        Write-Debug $videoUrl
-        Write-Debug $outputPath
-
-        if (Test-Path $outputPath) {
-            Write-Warning "目标文件 $outputPath 已存在，自动跳过"
-        } else {
-            Write-Progress -Activity '下载视频' -Status "下载《$title》视频文件"
-            if ($PSCmdlet.ShouldProcess("$videoUrl", 'Invoke-WebRequest')) {
-                Invoke-WebRequest -Uri $videoUrl -OutFile $outputPath
-            }
-        }
-    }
-}
-
-function Check-PSVersion {
+function Assert-PSVersion {
     if (($PSVersionTable.PSCompatibleVersions | Where-Object Major -ge 3).Count -eq 0) {
         Write-Error '请安装 PowerShell 3.0 以上的版本。'
         exit
@@ -163,7 +124,70 @@ function Get-ExistingCourses {
     }
 }
 
-Check-PSVersion
+# 下载课程。
+function Download-Course {
+    Param (
+        [string]$Uri
+    )
+
+    Write-Progress -Activity '下载视频' -Status '分析视频 ID'
+    $title, $ids = Get-ID -Uri $Uri
+    Write-Output "课程名称：$title"
+    Write-Debug $title
+    $folderName = Fix-FolderName $title
+    Write-Debug $folderName
+    if (-not (Test-Path $folderName)) { $null = mkdir $folderName }
+    New-ShortCut -Title $title -Uri $Uri
+
+    $outputPathes = New-Object System.Collections.ArrayList
+    $actualDownloadAny = $false
+    $ids | ForEach-Object {
+        if ($_.Title -cnotmatch '(?m)^\d') {
+            return
+        }
+    
+        $title = $_.Title
+        Write-Progress -Activity '下载视频' -Status '获取视频地址'
+        $videoUrl = Get-VideoUri $_.ID
+        $extension = ($videoUrl -split '\.')[-1]
+
+        $title = Fix-FileName $title
+        $outputPath = "$folderName\$title.$extension"
+        $null = $outputPathes.Add($outputPath)
+        Write-Output $title
+        Write-Debug $videoUrl
+        Write-Debug $outputPath
+
+        if (Test-Path $outputPath) {
+            Write-Warning "目标文件 $outputPath 已存在，自动跳过"
+        } else {
+            Write-Progress -Activity '下载视频' -Status "下载《$title》视频文件"
+            if ($PSCmdlet.ShouldProcess("$videoUrl", 'Invoke-WebRequest')) {
+                Invoke-WebRequest -Uri $videoUrl -OutFile $outputPath
+                $actualDownloadAny = $true
+            }
+        }
+    }
+
+    $targetFile = "$folderName\$folderName.flv"
+    if ($Combine -and ($actualDownloadAny -or -not (Test-Path $targetFile))) {
+        Write-Progress -Activity '下载视频' -Status '合并视频'    
+        Write-Output ("合并视频（共 {0:N0} 个）" -f $outputPathes.Count)
+        $outputPathes.Insert(0, $targetFile)
+        
+        $eap = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        .\FlvBind.exe $outputPathes.ToArray()
+        $ErrorActionPreference = $eap
+        if ($?) {
+            Write-Output '视频合并成功'
+        } else {
+            Write-Warning '视频合并失败'
+        }
+    }
+}
+
+Assert-PSVersion
 
 # 判断参数集
 $chosen= $PSCmdlet.ParameterSetName
