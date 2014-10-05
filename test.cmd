@@ -1,2 +1,2 @@
-powershell -NoProfile -ExecutionPolicy Unrestricted .\Download-Imooc.ps1 75,156,197,3399 -Combine -RemoveOriginal
+powershell -NoProfile -ExecutionPolicy Unrestricted .\Download-Imooc.ps1 75,197,156,203 -Combine -RemoveOriginal
 pause
