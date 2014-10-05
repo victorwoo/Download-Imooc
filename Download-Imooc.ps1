@@ -44,6 +44,12 @@
 	.NOTES
 		若在使用中遇到问题，请联系 victorwoo@gmail.com
 
+	.INPUTS
+		None
+
+	.OUTPUTS
+		None
+
 	.LINK
 		https://github.com/victorwoo/Download-Imooc
 
