@@ -1,18 +1,72 @@
-﻿# Require PowerShell 3.0 or higher.
+﻿<#
+	.SYNOPSIS
+		这是一个从 http://www.imooc.com 教学网站批量下载视频的 PowerShell 脚本。
+
+	.DESCRIPTION
+		支持合并 *.flv、输出清单、断点续传、更新本地目录等功能。默认下载的是最高清晰度的视频。
+
+	.PARAMETER  Uri
+		教程专辑的 URL，例如 'http://www.imooc.com/learn/197'。
+
+	.PARAMETER  ID
+		教程专辑的 ID，支持多个，例如 75,197,156,203。
+
+	.PARAMETER  Combine
+		自动合并 *.flv 视频。
+
+	.PARAMETER  RemoveOriginal
+		删除分段视频。只有在指定 -Combine 开关的情况下才生效。
+
+	.EXAMPLE
+		PS> .\Download-Imooc.ps1 http://www.imooc.com/learn/75
+		根据教程专辑的 URL 来下载。
+
+	.EXAMPLE
+		PS> .\Download-Imooc.ps1 75
+		根据教程专辑的 ID 来下载。
+
+	.EXAMPLE
+		PS> .\Download-Imooc.ps1 75,197,156,203
+		根据教程专辑的 ID 来下载。支持输入多个 ID。
+
+	.EXAMPLE
+		PS> .\Download-Imooc.ps1 http://www.imooc.com/learn/75 -Combine -RemoveOriginal
+		根据教程专辑的 URL 来下载。完成之后合并所有的视频。
+
+	.EXAMPLE
+		PS> .\Download-Imooc.ps1 75,197,156,203 -Combine -RemoveOriginal
+		根据教程专辑的 ID 来下载。支持输入多个 ID。完成之后合并所有的视频。，并且删除原始的分段视频。
+
+	.EXAMPLE
+		PS> .\Download-Imooc.ps1
+		不带任何参数运行该脚本，将自动检测当前目录下的所有下载文件夹，同时检测对应的专辑网站。对于本地缺失的视频或网站更新的视频，将自动续传。
+
+	.NOTES
+		若在使用中遇到问题，请联系 victorwoo@gmail.com
+
+	.LINK
+		https://github.com/victorwoo/Download-Imooc
+
+	.LINK
+		http://blog.vichamp.com/powershell/2014/09/26/download-videos-from-imooc-com-by-powershell/
+
+#>
+
+# Require PowerShell 3.0 or higher.
 
 [CmdletBinding(DefaultParameterSetName='URI', SupportsShouldProcess=$true, ConfirmImpact='Medium')]
 Param
 (
     [Parameter(ParameterSetName='URI', Position = 0, Mandatory = $false, HelpMessage = '请输入专辑 URL')]
     [string]
-    $Uri, # 'http://www.imooc.com/learn/197'
+    $Uri,
 
     [Parameter(ParameterSetName='ID', Position = 0, Mandatory = $true, HelpMessage = '请输入专辑 ID，多个 ID 请用逗号隔开')]
     [int[]]
-    $ID, # @(75, 197)
+    $ID,
 
     [Switch]
-    $Combine, # = $true
+    $Combine,
 
     [Switch]
     $RemoveOriginal
@@ -121,7 +175,7 @@ function New-ShortCut {
 
 # 判断 PowerShell 运行时版本。禁止在低版本的环境运行。
 function Assert-PSVersion {
-    if (($PSVersionTable.PSCompatibleVersions | Where-Object Major -ge 3).Count -eq 0) {
+    if ($PSVersionTable.PSVersion.Major -lt 3) {
         Write-Error '请安装 PowerShell 3.0 以上的版本。'
         exit
     }
