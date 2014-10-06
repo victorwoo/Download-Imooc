@@ -120,7 +120,7 @@ function Get-NormalizedFolderName
 }
 
 # 从专辑页面中分析标题和视频页面的 ID。
-function Get-Videos
+function Get-CourseInfo
 {
 	Param (
 		$Uri
@@ -148,7 +148,6 @@ function Get-Videos
 			{
 				return
 			}
-			Write-Debug $during
 			$during = [System.TimeSpan]::Parse("00:$during")
 			return [PSCustomObject][Ordered]@{
 				ID = $id;
@@ -171,6 +170,7 @@ function Get-VideoUri
 	$uri = $template -f $ID
 	Write-Debug $uri
 	$result = Invoke-RestMethod $uri
+	
 	if ($result.result -ne 0)
 	{
 		Write-Warning $result.result
@@ -181,6 +181,26 @@ function Get-VideoUri
 	# 取最高清晰度的版本。
 	$uri = $uri.Replace('L.flv', 'H.flv').Replace('M.flv', 'H.flv')
 	return $uri
+}
+
+# 获取源码下载信息。
+function Get-SourceInfo
+{
+	Param (
+		[Parameter(ValueFromPipeline = $true)]
+		$ID
+	)
+	
+	$template = 'http://www.imooc.com/video/{0}'
+	$uri = $template -f $ID
+	Write-Debug $uri
+	$response = Invoke-WebRequest $uri
+	
+	$link = $response.Links | Where-Object { $_.class -eq 'downcode' }
+	$title = $link.title
+	$href = $link.href
+	echo $title
+	echo $href
 }
 
 # 创建“.url”快捷方式。
@@ -309,6 +329,29 @@ function Combine-Videos
 	}
 }
 
+# 下载配套源代码。
+function Download-Source
+{
+	Param (
+		$FolderName,
+		$Title,
+		$Href
+	)
+	
+	if (-not $Title -or -not $Href)
+	{
+		return
+	}
+	
+	$extension = ($Href -split '\.')[-1]
+	$outputPath = "$folderName\$Title.$extension"
+	
+	if ($PSCmdlet.ShouldProcess("$Href", 'Invoke-WebRequest'))
+	{
+		Invoke-WebRequest -Uri $Href -OutFile $outputPath
+	}
+}
+
 # 下载课程。
 function Download-Course
 {
@@ -317,11 +360,9 @@ function Download-Course
 	)
 	
 	Write-Progress -Activity '下载视频' -Status '分析视频 ID'
-	$courseTitle, $videos = Get-Videos -Uri $Uri
-	Write-Output "课程名称：$title"
-	Write-Debug $courseTitle
+	$courseTitle, $videos = Get-CourseInfo -Uri $Uri
+	Write-Output "《$courseTitle》"
 	$folderName = Get-NormalizedFolderName $courseTitle
-	Write-Debug $folderName
 	if (-not (Test-Path $folderName)) { $null = mkdir $folderName }
 	New-ShortCut -Title $courseTitle -Uri $Uri
 	
@@ -338,6 +379,13 @@ function Download-Course
 		$title = $_.Title
 		Write-Progress -Activity '下载视频' -Status '获取视频地址' -PercentComplete ($counter / $videos.Count / 2 * 100)
 		$counter++
+		
+		$sourceTitle, $sourceHref = Get-SourceInfo $_.ID
+		if ($sourceTitle -and $sourceHref)
+		{
+			Download-Source $folderName $sourceTitle $sourceHref
+		}
+		
 		$videoUrl = Get-VideoUri $_.ID
 		$extension = ($videoUrl -split '\.')[-1]
 		
@@ -362,6 +410,7 @@ function Download-Course
 				$actualDownloadAny = $true
 			}
 		}
+		echo ''
 	}
 	
 	Out-IndexFile $courseTitle $Uri $videos $folderName
