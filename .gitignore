@@ -49,3 +49,4 @@ Session.vim
 
 ### custom ###
 /*/*
+*.TempPoint.ps1
