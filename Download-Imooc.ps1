@@ -88,7 +88,7 @@ Param
 	$RemoveOriginal
 )
 
-$DebugPreference = 'Continue' # Continue, SilentlyContinue
+# $DebugPreference = 'Continue' # Continue, SilentlyContinue
 # $WhatIfPreference = $true # $true, $false
 
 # 修正文件名，将文件系统不支持的字符替换成“.”
