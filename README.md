@@ -27,6 +27,10 @@ Download-Imooc
 
 	.\Download-Imooc.ps1 -Combine
 
+若希望自动合并之后删除原分段视频，请使用 `-RemoveOriginal` 参数
+
+    .\Download-Imooc.ps1 -Combine -RemoveOriginal
+
 关于
 ----
-代码中用到了参数分组、`-WhatIf` 处理等技术，供参考。
+代码中用到了参数分组、`-WhatIf` 处理、语义化注释等技术，供参考。
