@@ -1,5 +1,5 @@
-Download-Imooc
-==============
+Download-Imooc 1.7.1 （2014-10-08)
+==================================
 
 这是一个从 http://www.imooc.com 教学网站批量下载视频的 PowerShell 脚本。默认下载的是最高清晰度的视频。
 
@@ -27,6 +27,10 @@ Download-Imooc
 
 	.\Download-Imooc.ps1 -Combine
 
+若希望自动合并之后删除原分段视频，请使用 `-RemoveOriginal` 参数
+
+    .\Download-Imooc.ps1 -Combine -RemoveOriginal
+
 关于
 ----
-代码中用到了参数分组、`-WhatIf` 处理等技术，供参考。
+代码中用到了参数分组、`-WhatIf` 处理、语义化注释等技术，供参考。
