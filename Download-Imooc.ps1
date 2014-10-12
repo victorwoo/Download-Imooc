@@ -290,7 +290,7 @@ function Combine-MP4
     
     $eap = $ErrorActionPreference
 	$ErrorActionPreference = "SilentlyContinue"
-    .\MP4Box.exe $params
+    .\util\MP4Box.exe $params
 	$ErrorActionPreference = $eap
 	
     return $?
@@ -305,7 +305,7 @@ function Combine-Flv
 			
 	$eap = $ErrorActionPreference
 	$ErrorActionPreference = "SilentlyContinue"
-	.\FlvBind.exe $params.ToArray()
+	.\util\FlvBind.exe $params.ToArray()
 	$ErrorActionPreference = $eap
 			
     <#

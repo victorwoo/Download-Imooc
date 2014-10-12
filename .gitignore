@@ -49,4 +49,5 @@ Session.vim
 
 ### custom ###
 /*/*
+!/util/*
 *.TempPoint.ps1
