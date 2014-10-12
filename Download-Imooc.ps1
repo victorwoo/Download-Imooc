@@ -275,41 +275,83 @@ function Out-IndexFile
 	Add-Content $filePath -Encoding UTF8
 }
 
+function Combine-MP4
+{
+    Param ($sources, $dest)
+#mp4box -add file1 -add file2 [-new] dest
+    $params = @()
+    $sources | ForEach-Object {
+        $params += '-add'
+        $params += $_
+    }
+
+    $params += '-new'
+    $params += $dest
+    
+    $eap = $ErrorActionPreference
+	$ErrorActionPreference = "SilentlyContinue"
+    .\MP4Box.exe $params
+	$ErrorActionPreference = $eap
+	
+    return $?
+}
+
+function Combine-Flv
+{
+    Param ($sources, $dest)
+    $params = $sources
+
+    $params.Insert(0, $dest)
+			
+	$eap = $ErrorActionPreference
+	$ErrorActionPreference = "SilentlyContinue"
+	.\FlvBind.exe $params.ToArray()
+	$ErrorActionPreference = $eap
+			
+    <#
+    $outputPathes = $outputPathes | ForEach-Object {
+        "`"$_`""
+    }
+    Start-Process `
+        -WorkingDirectory (pwd) `
+        -FilePath .\FlvBind.exe `
+        -ArgumentList $outputPathes `
+        -NoNewWindow `
+        -Wait `
+        -ErrorAction SilentlyContinue `
+        -WindowStyle Hidden
+    #>
+
+    return $?
+}
+
 # 用 FlvBind.exe 合并视频文件。
 function Combine-Videos
 {
 	Param ($folderName, $actualDownloadAny, $outputPathes)
 	
-	$targetFile = "$folderName\$folderName.flv"
 	#if ($Combine -and ($actualDownloadAny -or -not (Test-Path $targetFile))) {
 	if ($Combine)
 	{
+        if ($outputPathes.Count -eq 0) {
+            return
+        }
+        $extension = [System.IO.Path]::GetExtension($outputPathes[0])
+        $targetFile = "$folderName\$folderName$extension"
+
 		# -and ($actualDownloadAny -or -not (Test-Path $targetFile))) {
 		if ($actualDownloadAny -or -not (Test-Path $targetFile) -or (Test-Path $targetFile) -and $PSCmdlet.ShouldProcess('分段视频', '合并'))
 		{
 			Write-Progress -Activity '下载视频' -Status '合并视频'
 			Write-Output ("合并视频（共 {0:N0} 个）" -f $outputPathes.Count)
-			$outputPathes.Insert(0, $targetFile)
-			
-			$eap = $ErrorActionPreference
-			$ErrorActionPreference = "SilentlyContinue"
-			.\FlvBind.exe $outputPathes.ToArray()
-			$ErrorActionPreference = $eap
-			
-            <#
-            $outputPathes = $outputPathes | ForEach-Object {
-                "`"$_`""
+
+            if ($extension.ToLower() -eq '.flv') {
+                $result = Combine-Flv $outputPathes $targetFile
+            } elseif ($extension.ToLower() -eq '.mp4') {
+                $result = Combine-MP4 $outputPathes $targetFile
             }
-            Start-Process `
-                -WorkingDirectory (pwd) `
-                -FilePath .\FlvBind.exe `
-                -ArgumentList $outputPathes `
-                -NoNewWindow `
-                -Wait `
-                -ErrorAction SilentlyContinue `
-                -WindowStyle Hidden
-            #>
-			if ($?)
+			
+			if ($result)
 			{
 				Write-Output '视频合并成功'
 				if ($RemoveOriginal -and $PSCmdlet.ShouldProcess('分段视频', '删除'))
@@ -410,7 +452,6 @@ function Download-Course
 				$actualDownloadAny = $true
 			}
 		}
-		echo ''
 	}
 	
 	Out-IndexFile $courseTitle $Uri $videos $folderName
