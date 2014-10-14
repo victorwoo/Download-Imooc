@@ -196,11 +196,13 @@ function Get-SourceInfo
 	Write-Debug $uri
 	$response = Invoke-WebRequest $uri
 	
-	$link = $response.Links | Where-Object { $_.class -eq 'downcode' }
-	$title = $link.title
-	$href = $link.href
-	echo $title
-	echo $href
+	$response.Links | Where-Object { $_.class -eq 'downcode' } | ForEach-Object {
+        $source = [PSCustomObject][Ordered]@{
+            Title = $_.title;
+            Href = $_.href;
+        }
+        echo $source
+    }
 }
 
 # 创建“.url”快捷方式。
@@ -386,12 +388,19 @@ function Download-Source
 	}
 	
 	$extension = ($Href -split '\.')[-1]
-	$outputPath = "$folderName\$Title.$extension"
+
+    if (!(Test-Path "$folderName\源代码")) {
+        $null = mkdir "$folderName\源代码"
+    }
+
+	$outputPath = "$folderName\源代码\$Title.$extension"
 	
-	if ($PSCmdlet.ShouldProcess("$Href", 'Invoke-WebRequest'))
-	{
-		Invoke-WebRequest -Uri $Href -OutFile $outputPath
-	}
+    if (!(Test-Path $outputPath)) {
+	    if ($PSCmdlet.ShouldProcess("$Href", 'Invoke-WebRequest'))
+	    {
+		    Invoke-WebRequest -Uri $Href -OutFile $outputPath
+	    }
+    }
 }
 
 # 下载课程。
@@ -422,17 +431,20 @@ function Download-Course
 		Write-Progress -Activity '下载视频' -Status '获取视频地址' -PercentComplete ($counter / $videos.Count / 2 * 100)
 		$counter++
 		
-		$sourceTitle, $sourceHref = Get-SourceInfo $_.ID
-		if ($sourceTitle -and $sourceHref)
-		{
-			Download-Source $folderName $sourceTitle $sourceHref
+		$sources = Get-SourceInfo $_.ID
+		$sources | ForEach-Object {
+			Download-Source $folderName $_.Title $_.Href
 		}
 		
 		$videoUrl = Get-VideoUri $_.ID
 		$extension = ($videoUrl -split '\.')[-1]
 		
 		$title = Get-NormalizedFileName $title
-		$outputPath = "$folderName\$title.$extension"
+        if (!(Test-Path "$folderName\分段视频")) {
+            $null = mkdir "$folderName\分段视频"
+        }
+
+		$outputPath = "$folderName\分段视频\$title.$extension"
 		$null = $outputPathes.Add($outputPath)
 		Write-Output $title
 		Write-Debug $videoUrl
