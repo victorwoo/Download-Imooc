@@ -280,10 +280,10 @@ function Out-IndexFile
 function Combine-MP4
 {
     Param ($sources, $dest)
-#mp4box -add file1 -add file2 [-new] dest
+#mp4box -cat file1 -cat file2 [-new] dest
     $params = @()
     $sources | ForEach-Object {
-        $params += '-add'
+        $params += '-cat'
         $params += $_
     }
 
@@ -358,10 +358,11 @@ function Combine-Videos
 				Write-Output '视频合并成功'
 				if ($RemoveOriginal -and $PSCmdlet.ShouldProcess('分段视频', '删除'))
 				{
-					$outputPathes.RemoveAt(0)
-					$outputPathes | ForEach-Object {
+					#$outputPathes.RemoveAt(0)
+                    Remove-Item "$folderName\分段视频" -Recurse
+					<# $outputPathes | ForEach-Object {
 						Remove-Item $_
-					}
+					} #>
 					Write-Output '原始视频删除完毕'
 				}
 			}
