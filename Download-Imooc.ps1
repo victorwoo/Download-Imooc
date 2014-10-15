@@ -347,6 +347,10 @@ function Combine-Videos
 			Write-Progress -Activity '下载视频' -Status '合并视频'
 			Write-Output ("合并视频（共 {0:N0} 个）" -f $outputPathes.Count)
 
+            if (Test-Path $targetFile) {
+                Remove-Item $targetFile
+            }
+
             if ($extension.ToLower() -eq '.flv') {
                 $result = Combine-Flv $outputPathes $targetFile
             } elseif ($extension.ToLower() -eq '.mp4') {
