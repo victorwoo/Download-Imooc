@@ -102,6 +102,7 @@ function Get-NormalizedFileName
 		$FileName = $FileName.Replace($_, '.')
 	}
 	
+    $FileName = $FileName.Replace('+', '.')
 	return $FileName
 }
 
@@ -116,6 +117,7 @@ function Get-NormalizedFolderName
 		$FolderName = $FolderName.Replace($_, '.')
 	}
 	
+    $FolderName = $FolderName.Replace('+', '.')
 	return $FolderName
 }
 
@@ -180,6 +182,7 @@ function Get-VideoUri
 	
 	# 取最高清晰度的版本。
 	$uri = $uri.Replace('L.flv', 'H.flv').Replace('M.flv', 'H.flv')
+    $uri = $uri.Replace('L.mp4', 'H.mp4').Replace('M.mp4', 'H.mp4')
 	return $uri
 }
 
@@ -417,6 +420,7 @@ function Download-Course
 	
 	Write-Progress -Activity '下载视频' -Status '分析视频 ID'
 	$courseTitle, $videos = Get-CourseInfo -Uri $Uri
+    $courseTitle = Get-NormalizedFileName $courseTitle
 	Write-Output "《$courseTitle》"
 	$folderName = Get-NormalizedFolderName $courseTitle
 	if (-not (Test-Path $folderName)) { $null = mkdir $folderName }
