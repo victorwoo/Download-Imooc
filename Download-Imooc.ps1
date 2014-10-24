@@ -460,7 +460,7 @@ function Download-Course
             -Activity '下载视频' `
             -CurrentOperation $title `
             -PercentComplete ($videosIndex / $videos.Count * 100) `
-            -Id 2`
+            -Id 2 `
             -ParentId 1
 
 		[array]$sources = Get-SourceInfo $_.ID
@@ -533,7 +533,7 @@ function Download-Course
         -Activity '下载视频' `
         -CurrentOperation $title `
         -Completed `
-        -Id 2`
+        -Id 2 `
         -ParentId 1
 }
 
