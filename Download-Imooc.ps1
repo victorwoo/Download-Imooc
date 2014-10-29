@@ -88,8 +88,8 @@ Param
 	$RemoveOriginal
 )
 
-$DebugPreference = 'Continue' # Continue, SilentlyContinue
- #$ProgressPreference='SilentlyContinue'
+# $DebugPreference = 'Continue' # Continue, SilentlyContinue
+# $ProgressPreference='SilentlyContinue'
 # $WhatIfPreference = $true # $true, $false
 
 # 修正文件名，将文件系统不支持的字符替换成“.”
@@ -179,7 +179,7 @@ function Get-VideoUri
 		Write-Warning $result.result
 	}
 	
-	$uri = $result.data.result.mpath.'0'
+	$uri = $result.data.result.mpath[0]
 	
 	# 取最高清晰度的版本。
 	$uri = $uri.Replace('L.flv', 'H.flv').Replace('M.flv', 'H.flv')
