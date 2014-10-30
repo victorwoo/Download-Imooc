@@ -88,8 +88,8 @@ Param
 	$RemoveOriginal
 )
 
-$DebugPreference = 'Continue' # Continue, SilentlyContinue
- #$ProgressPreference='SilentlyContinue'
+# $DebugPreference = 'Continue' # Continue, SilentlyContinue
+# $ProgressPreference='SilentlyContinue'
 # $WhatIfPreference = $true # $true, $false
 
 # 修正文件名，将文件系统不支持的字符替换成“.”
@@ -179,7 +179,7 @@ function Get-VideoUri
 		Write-Warning $result.result
 	}
 	
-	$uri = $result.data.result.mpath.'0'
+	$uri = $result.data.result.mpath[0]
 	
 	# 取最高清晰度的版本。
 	$uri = $uri.Replace('L.flv', 'H.flv').Replace('M.flv', 'H.flv')
@@ -348,7 +348,12 @@ function Combine-Videos
 		# -and ($actualDownloadAny -or -not (Test-Path $targetFile))) {
 		if ($actualDownloadAny -or -not (Test-Path $targetFile) -or (Test-Path $targetFile) -and $PSCmdlet.ShouldProcess('分段视频', '合并'))
 		{
-			Write-Progress -Activity '下载' -Status '合并视频' -CurrentOperation ("合并视频（共 {0:N0} 个）" -f $outputPathes.Count) -Id 2
+			Write-Progress `
+                -Activity '下载' `
+                -Status '合并视频' `
+                -CurrentOperation ("合并视频（共 {0:N0} 个）" -f $outputPathes.Count) `
+                -Id 2 `
+
 			Write-Output ("合并视频（共 {0:N0} 个）" -f $outputPathes.Count)
 
             if (Test-Path $targetFile) {
@@ -419,10 +424,15 @@ function Download-Course
 		[string]$Uri
 	)
 	
-    Write-Progress -Activity '下载课程' -Status '分析视频 ID' -PercentComplete ($courcesIndex / $cources.Length * 100) -CurrentOperation $Uri -Id 1
+    Write-Progress `
+        -Activity '下载课程' `
+        -Status '分析视频 ID' `
+        -CurrentOperation $Uri `
+        -PercentComplete ($courcesIndex / $cources.Length * 100) `
+        -Id 1
+
 	$courseTitle, [array]$videos = Get-CourseInfo -Uri $Uri
-    
-    
+ 
 	Write-Output "《$courseTitle》"
 	$folderName = Get-NormalizedFolderName $courseTitle
 	if (-not (Test-Path $folderName)) { $null = mkdir $folderName }
@@ -432,27 +442,46 @@ function Download-Course
 	$actualDownloadAny = $false
 	#$videos = $videos | Select-Object -First 3
 	
-    Write-Progress -Activity '下载课程' -Status '下载视频' -PercentComplete ($courcesIndex / $cources.Length * 100) -CurrentOperation $courseTitle -Id 1
-    $videoIndex = 0
+    Write-Progress `
+        -Activity '下载课程' `
+        -CurrentOperation $courseTitle `
+        -PercentComplete ($courcesIndex / $cources.Length * 100) `
+        -Id 1
+    $videosIndex = 0
 	$videos | ForEach-Object {
 		if ($_.Title -cnotmatch '(?m)^\d')
 		{
-            $videoIndex++
+            $videosIndex++
 			return
 		}
 
 		$title = $_.Title
-        Write-Progress -Activity '下载视频' -CurrentOperation $title -ParentId 1 -PercentComplete ($videoIndex / $videos.Count * 100) -Id 2
+        Write-Progress `
+            -Activity '下载视频' `
+            -CurrentOperation $title `
+            -PercentComplete ($videosIndex / $videos.Count * 100) `
+            -Id 2 `
+            -ParentId 1
 
 		[array]$sources = Get-SourceInfo $_.ID
         $sourceIndex = 0
 		$sources | ForEach-Object {
-            Write-Progress -Activity '下载源代码' -CurrentOperation $_.Href -ParentId 2 -PercentComplete ($sourceIndex / $sources.Length * 100) -Id 3
+            Write-Progress `
+                -Activity '下载源代码' `
+                -CurrentOperation $_.Href `
+                -PercentComplete ($sourceIndex / $sources.Length * 100) `
+                -Id 3 `
+                -ParentId 2
+
 			Download-Source $folderName $_.Title $_.Href
             $sourceIndex++
 		}
         echo 源代码下载完成
-        Write-Progress -Activity '下载源代码' -ParentId 2 -Completed -Id 3
+        Write-Progress `
+            -Activity '下载源代码' `
+            -Completed `
+            -Id 3 `
+            -ParentId 2
 		
 		$videoUrl = Get-VideoUri $_.ID
 		$extension = ($videoUrl -split '\.')[-1]
@@ -468,28 +497,44 @@ function Download-Course
 		Write-Debug $videoUrl
 		Write-Debug $outputPath
 		
-        $videosIndex = 0
 		if (Test-Path $outputPath)
 		{
 			Write-Debug "目标文件 $outputPath 已存在，自动跳过"
 		}
 		else
 		{
-			Write-Progress -Activity '下载视频' -CurrentOperation "$title" -PercentComplete ($videosIndex / $videos.Count * 100) -Id 2
-			$videosIndex++
+			Write-Progress `
+                -Activity '下载视频' `
+                -CurrentOperation "$title" `
+                -PercentComplete ($videosIndex / $videos.Count * 100) `
+                -Id 2 `
+                -ParentId 1
+
 			if ($PSCmdlet.ShouldProcess("$videoUrl", 'Invoke-WebRequest'))
 			{
 				Invoke-WebRequest -Uri $videoUrl -OutFile $outputPath
 				$actualDownloadAny = $true
 			}
 		}
-        $videoIndex++
+        $videosIndex++
 	}
 	
 	Out-IndexFile $courseTitle $Uri $videos $folderName
-    Write-Progress -Activity '下载视频' -Status '合并视频' -CurrentOperation $title -ParentId 1 -PercentComplete 100 -Id 2
+    Write-Progress `
+        -Activity '下载视频' `
+        -Status '合并视频' `
+        -CurrentOperation $title `
+        -PercentComplete 100 `
+        -Id 2 `
+        -ParentId 1
+
 	Combine-Videos $folderName $actualDownloadAny $outputPathes
-    Write-Progress -Activity '下载视频' -CurrentOperation $title -ParentId 1 -Completed -Id 2
+    Write-Progress `
+        -Activity '下载视频' `
+        -CurrentOperation $title `
+        -Completed `
+        -Id 2 `
+        -ParentId 1
 }
 
 Assert-PSVersion
@@ -525,3 +570,9 @@ $cources | ForEach-Object {
 	Download-Course $_
     $courcesIndex++
 }
+Write-Progress `
+    -Activity '下载课程' `
+    -Completed `
+    -Id 1
+
+echo '全部课程下载完毕'
