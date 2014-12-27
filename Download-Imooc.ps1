@@ -129,14 +129,23 @@ function Get-CourseInfo
 		$Uri
 	)
 	
-	$Uri = $Uri.Replace('/view/', '/learn/')
-	$Uri = $Uri.Replace('/qa/', '/learn/')
-	$Uri = $Uri.Replace('/note/', '/learn/')
-	$Uri = $Uri.Replace('/wiki/', '/learn/')
+    $Uri = $Uri.Replace('/learn/', '/view/')
+	$Uri = $Uri.Replace('/qa/', '/view/')
+	$Uri = $Uri.Replace('/note/', '/view/')
+	$Uri = $Uri.Replace('/wiki/', '/view/')
 	$response = Invoke-WebRequest $Uri
 	$title = $response.ParsedHtml.title
-	
+    if ($response.RawContent -cmatch '<div class="course_shortdecription">\s*(?<course_shortdecription>.*?)\s*</div>') {
+        $description = $Matches['course_shortdecription']
+    } else {
+        $description = ''
+    }
+	$Uri = $Uri.Replace('/view/', '/learn/')
+    $response = Invoke-WebRequest $Uri
+
 	echo $title
+    echo $description
+
 	$links = $response.Links
 	$links | ForEach-Object {
 		if ($_.href -cmatch '(?m)^/video/(\d+)$')
@@ -257,11 +266,12 @@ function Get-ExistingCourses
 # 输出索引文件。
 function Out-IndexFile
 {
-	Param ($title, $uri, $videos, $folderName)
+	Param ($title, $description, $uri, $videos, $folderName)
 	$filePath = Join-Path $folderName 'info.txt'
 	
 	$title | Set-Content $filePath -Encoding UTF8
 	$uri | Add-Content $filePath -Encoding UTF8
+    "`n$description`n" | Add-Content $filePath -Encoding UTF8
 	
 	$global:offset = [System.TimeSpan]::Zero
 	$videos | Select-Object -Property @{
@@ -431,7 +441,7 @@ function Download-Course
         -PercentComplete ($courcesIndex / $cources.Length * 100) `
         -Id 1
 
-	$courseTitle, [array]$videos = Get-CourseInfo -Uri $Uri
+	$courseTitle, $description, [array]$videos = Get-CourseInfo -Uri $Uri
  
 	Write-Output "《$courseTitle》"
 	$folderName = Get-NormalizedFolderName $courseTitle
@@ -519,7 +529,7 @@ function Download-Course
         $videosIndex++
 	}
 	
-	Out-IndexFile $courseTitle $Uri $videos $folderName
+	Out-IndexFile $courseTitle $description $Uri $videos $folderName
     Write-Progress `
         -Activity '下载视频' `
         -Status '合并视频' `
@@ -557,7 +567,7 @@ if ($chosen -eq 'URI')
 
 if ($chosen -eq 'ID')
 {
-	$template = 'http://www.imooc.com/learn/{0}'
+	$template = 'http://www.imooc.com/view/{0}'
     [array]$cources = @()
 	$ID | ForEach-Object {
 		$Uri = $template -f $_
